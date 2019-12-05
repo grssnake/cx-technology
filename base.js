@@ -1,5 +1,10 @@
 var lightSensor = require('@amperka/light-sensor').connect(A0);
 
+var Motor = require('@amperka/motor');
+ 
+// Подключаем мотор канала M1 на Motor Shield
+var myMotor = Motor.connect(Motor.MotorShield.M1);
+
 var myLed = require('@amperka/led').connect(P13);
 myLed.turnOff();
 
@@ -18,14 +23,29 @@ manualModeLed.turnOff();
 
 var receiver = require('@amperka/ir-receiver').connect(P2);
 
+function motorDown() {
+  myMotor.write(-0.5);
+}
+
+function motorUp() {
+  myMotor.write(0.5);
+}
+
+function motorStop() {
+  myMotor.write(0);
+}
+
 receiver.on('receive', function(code) {
   console.log('REMOTE CODE: ', code);
   // в зависимости от нажатой кнопки пульта
   // даём разные команды роботу
+  motorStop();
   if (code === 378101919 && manualMode) {
     console.log('UP!!!');
+    motorUp();
   } else if (code === 378124359 && manualMode){
     console.log('DOWN!!!');
+    motorDown();
   } else if (code === 378130479) {
     console.log(manualMode ? "Manual mode off" : "Manual mode on");
     manualMode = manualMode ? false : true;
@@ -39,11 +59,11 @@ var ledOnAnim = require('@amperka/animation').create({
   duration: 4,          // продолжительностью 2 секунды
   updateInterval: 0.02  // с обновлением каждые 20 мс
 });
+
 ledOnAnim.on('update', function(val) {
   console.log('Led brightness:', val, ' from 0 to 1');
-  myLed.brightness(val);
-  myLed.turnOn();
-  // Заставляем по мере обновления анимации поворачиваться сервопривод
+  // myLed.brightness(val);
+  // myLed.turnOn();
   //myServo.write(val);
 });
 
@@ -62,10 +82,13 @@ setInterval( function() {
 
 hist.on('high', function() {
   console.log('HIGH!!!', myLed);
-  myLed.blink(1, 1);
+  myLed.turnOff();
+  motorUp();
 });
 
 hist.on('low', function() {
   console.log('LOW!!!');
   ledOnAnim.play();
+  myLed.blink(1, 1);
+  motorDown();
 });
